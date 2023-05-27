@@ -1,8 +1,8 @@
 import json
 
 
-def process(data_name, path = 'data/real/'):
-    if data_name == 'roc':
+def process(args, path = 'data/real/'):
+    if args.data_name == 'roc':
         data_path = path + 'roc/roc2017real.txt'
         with open(data_path, 'r') as f:
             data = f.readlines()

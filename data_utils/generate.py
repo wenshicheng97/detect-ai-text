@@ -23,6 +23,7 @@ def construct_generation_args():
     parser.add_argument("--time_limit", type=int, default=5, help='in miniutes')
     parser.add_argument("--start", type=int, default=0, help='starting index of the data')
     parser.add_argument("--output_dir", type=str, default='data/fakes')
+    parser.add_argument("--window", type=int, default=5, help='flucuation window of the orignal length')
     parser.add_argument("--do_sample", type=bool, default=True)
     parser.add_argument("--num_beams", type=int, default=1)
     parser.add_argument("--temperature", type=int, default=1)
@@ -37,14 +38,8 @@ def construct_generation_args():
     return args
 
 
-def get_inputs(data_name, text, tokenizer):
-    if data_name == 'roc':
-        prompt = text.split('.')[0] + '.' # take the first sentence
-        return tokenizer(prompt, return_tensors="pt")
-
-
-def load_model(model_name):
-    if model_name == 'llama-7B':
+def load_model(args):
+    if args.model_name == 'llama-7B':
         model_path = '/home/tangyimi/ai_detection/7B_converted'
         model = LlamaForCausalLM.from_pretrained(model_path)
         tokenizer = AutoTokenizer.from_pretrained(model_path)
@@ -52,16 +47,30 @@ def load_model(model_name):
     return model, tokenizer
 
 
+def get_inputs(args, text, tokenizer):
+    if args.data_name == 'roc':
+        prompt = text.split('.')[0] + '.' # take the first sentence
+    return tokenizer(prompt, return_tensors="pt")
+
+
+def get_outputs(args, model, tokenizer, inputs, length):
+    generate_ids = model.generate(inputs.input_ids, min_length=length - args.window, max_length=length + args.window, 
+                                  do_sample=args.do_sample, num_beams=args.num_beams, temperature=args.temperature, top_k=args.top_k, top_p=args.top_p)
+    result = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+
+    return result
+
+
 def generate(args):
     current = time.time()
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # load model
-    model, tokenizer = load_model(args.model)
+    model, tokenizer = load_model(args)
     model = model.to(device)
 
     # load data
-    data = process(args.data_name)
+    data = process(args)
     fake_results = []
 
     for idx, line in enumerate(data):
@@ -73,12 +82,11 @@ def generate(args):
             text = line['text']
             length = tokenizer(text, return_tensors="pt")['input_ids'].shape[-1]
          
-            inputs = get_inputs(args.data_name, text, tokenizer).to(device)
+            inputs = get_inputs(args, text, tokenizer).to(device)
 
             print('Generating:', id)
-            # Generate
-            generate_ids = model.generate(inputs.input_ids, max_length=length, do_sample=args.do_sample, num_beams=args.num_beams, temperature=args.temperature, top_k=args.top_k, top_p=args.top_p)
-            result = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+            
+            result = get_outputs(args, model, tokenizer, inputs, length)
 
             json_result = {'id': id, 'text': result}
             fake_results.append(json_result)
