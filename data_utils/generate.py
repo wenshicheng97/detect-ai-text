@@ -39,7 +39,7 @@ def construct_generation_args():
 
 
 def load_model(args):
-    if args.model_name == 'llama-7B':
+    if args.model == 'llama-7B':
         model_path = '/home/tangyimi/ai_detection/7B_converted'
         model = LlamaForCausalLM.from_pretrained(model_path)
         tokenizer = AutoTokenizer.from_pretrained(model_path)
