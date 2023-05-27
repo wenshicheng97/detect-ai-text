@@ -71,7 +71,6 @@ def generate(args):
 
     # load data
     data = process(args)
-    fake_results = []
 
     for idx, line in enumerate(data):
         if time.time() - current >= args.time_limit * 60:
@@ -89,12 +88,10 @@ def generate(args):
             result = get_outputs(args, model, tokenizer, inputs, length)
 
             json_result = {'id': id, 'text': result}
-            fake_results.append(json_result)
 
-    output_file = args.output_dir.rstrip('/') + '/'  + '{}Fake.jsonl'.format(args.data_name)
-    with open(output_file, 'a') as f:
-        for fake in fake_results:
-            f.write(json.dumps(fake) + "\n")
+            output_file = args.output_dir.rstrip('/') + '/'  + '{}Fake.jsonl'.format(args.data_name)
+            with open(output_file, 'a') as f:
+                f.write(json.dumps(json_result) + "\n")
 
 
 def main():
