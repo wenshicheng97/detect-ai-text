@@ -6,11 +6,17 @@ nltk.download('punkt')
 
 
 class Processor(object):
-    def __init__(self, data_name, generation_type, template, instruction):
-        self.data_name = data_name
+    def __init__(self, model_name, generation_type, instruction):
+        self.model_name = model_name
         self.generation_type = generation_type
-        self.template = template
         self.instruction = instruction
+        match model_name:
+            case 'alpaca-7b':
+                self.template = "{}\r\n\r\n### {}\r\n\r\n### Response:"
+            case 'vicuna-7b':
+                self.template = ''
+            case _:
+                self.template = ''
 
     @staticmethod
     def process_text(text):
@@ -18,33 +24,38 @@ class Processor(object):
 
     def get_inputs(self, tokenizer, text):
         input_text = self.template.format(self.instruction, text)
-        print(input_text)
         return tokenizer(input_text, return_tensors='pt')
 
 
-class AlpacaProcessor(Processor):
-    def __init__(self, data_name, generation_type):
-        template = "{}\r\n\r\n### {}\r\n\r\n### Response:"
-        instruction = ""
-        if data_name == 'arxiv':
-            instruction = (
-                "Below is an instruction that describes a task. "
-                "Rewrite the following text as an abstract of paper."
-            )
+class RocProcessor(Processor):
+    def __init__(self, model_name, generation_type):
+        match model_name:
+            case 'alpaca-7b':
+                instruction = ''
+            case 'vicuna-7b':
+                instruction = ''
+            case _:
+                instruction = ''
 
-        super(AlpacaProcessor, self).__init__(data_name, generation_type, template, instruction)
-        
+        super(RocProcessor, self).__init__(model_name, generation_type, instruction)
+
     def process_text(self, text):
-        if self.generation_type == 'continue':
-            return nltk.tokenize.sent_tokenize(text, language='english')[0]
-        return text
+        return nltk.tokenize.sent_tokenize(text, language='english')[0]
 
 
-class LLaMaProcessor(Processor):
-    def __init__(self, data_name, generation_type):
-        super(LLaMaProcessor, self).__init__(data_name, generation_type, '', '')
+class ArxivProcessor(Processor):
+    def __init__(self, model_name, generation_type):
+        match model_name:
+            case 'alpaca-7b':
+                instruction = 'Below is an instruction that describes a task. ' \
+                              'Rewrite the following text as an abstract of paper.'
+            case 'vicuna-7b':
+                instruction = ''
+            case _:
+                instruction = ''
 
+        super(ArxivProcessorr, self).__init__(model_name, generation_type, instruction)
 
-class VicunaProcessor(Processor):
-    def __init__(self, data_name, generation_type):
-        super(VicunaProcessor, self).__init__(data_name, generation_type, '', '')
+    def process_text(self, text):
+        return text.replace('\n', ' ')
+
