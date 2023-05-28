@@ -1,0 +1,15 @@
+# Byte-compiled
+.mypy_cache/
+__pycache__/
+*/__pycache__/
+.idea/
+
+# Test Data
+data/test/
+
+# Model weights
+weights/alpaca-7b/*
+weights/llama-7b/*
+weights/llama-13b/*
+weights/vicuna-7b/*
+weights/vicuna-13b/*
