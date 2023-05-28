@@ -27,11 +27,10 @@ def generate(**kwargs):
 
     # Load model
     tokenizer = AutoTokenizer.from_pretrained(path_to_model)
-    # model = AutoModelForCausalLM.from_pretrained(path_to_model)
-    # model = model.to(device)
+    model = AutoModelForCausalLM.from_pretrained(path_to_model)
+    model = model.to(device)
 
     # Load data
-    # data = process(kwargs['data_name'])
     fdata = open(os.path.join(kwargs['data_dir'], kwargs['data_name'], 'real.jsonl'), 'r')
 
     processor = LLaMaProcessor(kwargs['data_name'], 'continue')
@@ -54,20 +53,19 @@ def generate(**kwargs):
 
             print('Generating:', idx)
 
-            # generate_ids = model.generate(inputs.input_ids,
-            #                               min_length=text_length - kwargs['window'],
-            #                               max_length=text_length + kwargs['window'],
-            #                               do_sample=kwargs['do_sample'],
-            #                               num_beams=kwargs['num_beams'],
-            #                               temperature=kwargs['temperature'],
-            #                               top_k=kwargs['top_k'],
-            #                               top_p=kwargs['top_p']
-            #                               )
-            #
-            # result = tokenizer.batch_decode(generate_ids,
-            #                                 skip_special_tokens=True,
-            #                                 clean_up_tokenization_spaces=False)[0]
-            result = ''
+            generate_ids = model.generate(inputs.input_ids,
+                                          min_length=text_length - kwargs['window'],
+                                          max_length=text_length + kwargs['window'],
+                                          do_sample=kwargs['do_sample'],
+                                          num_beams=kwargs['num_beams'],
+                                          temperature=kwargs['temperature'],
+                                          top_k=kwargs['top_k'],
+                                          top_p=kwargs['top_p']
+                                          )
+
+            result = tokenizer.batch_decode(generate_ids,
+                                            skip_special_tokens=True,
+                                            clean_up_tokenization_spaces=False)[0]
 
             json_result = {'id': idx, 'text': result}
 
