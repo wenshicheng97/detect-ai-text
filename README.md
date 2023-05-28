@@ -2,4 +2,5 @@
 ## Data generation
 ```
 python -m utils/generate
+
 ```
