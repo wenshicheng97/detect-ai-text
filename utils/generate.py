@@ -9,7 +9,7 @@ import nltk
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from utils.process import *
 
-DATASETS = ['roc']
+DATASETS = ['roc', 'arxiv']
 MODELS = ['llama-7b', 'llama-13b', 'alpaca-7b', 'vicuna-7b', 'vicuna-13b']
 
 
@@ -33,7 +33,11 @@ def generate(**kwargs):
     # Load data
     fdata = open(os.path.join(kwargs['data_dir'], kwargs['data_name'], 'real.jsonl'), 'r')
 
-    processor = LLaMaProcessor(kwargs['data_name'], 'continue')
+    match kwargs['data_name']:
+        case 'roc':
+            processor = RocProcessor(kwargs['model'], 'continue')
+        case 'arxiv':
+            processor = ArxivProcessor(kwargs['model'], 'continue')
 
     for idx, line in enumerate(fdata):
         if kwargs['time_limit'] is not None:
@@ -45,13 +49,13 @@ def generate(**kwargs):
 
         sample = json.loads(line)
         if idx >= kwargs['start']:
-            # id = sample['id']
+            print('Generating:', idx)
             text = sample['text']
+
             text_length = len(tokenizer.encode(text))
          
             inputs = processor.get_inputs(tokenizer, text).to(device)
 
-            print('Generating:', idx)
 
             generate_ids = model.generate(inputs.input_ids,
                                           min_length=text_length - kwargs['window'],

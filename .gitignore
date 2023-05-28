@@ -4,8 +4,8 @@ __pycache__/
 */__pycache__/
 .idea/
 
-# Test Data
-data/test/
+# Data
+data/
 
 # Model weights
 weights/alpaca-7b/*
