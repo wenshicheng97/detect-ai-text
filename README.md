@@ -12,3 +12,8 @@ Run the following script
 python -m utils.generate
 ```
 
+## Detection
+
+```
+python -m detect.train --real-dir <REAL_DATASETS_PATH> --fake-dir <FAKE_DATASETS_PATH>
+```
