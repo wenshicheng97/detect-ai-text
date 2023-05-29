@@ -246,7 +246,7 @@ def run(**kwargs):
             break
 
 
-def construct_generation_args():
+def construct_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--max-epochs', type=int, default=5)
@@ -273,7 +273,7 @@ def construct_generation_args():
 
 
 def main():
-    args = construct_generation_args()
+    args = construct_args()
     
     nproc = int(subprocess.check_output([sys.executable, '-c', "import torch;"
                                          "print(torch.cuda.device_count() if torch.cuda.is_available() else 1)"]))
