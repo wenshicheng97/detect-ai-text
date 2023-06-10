@@ -2,7 +2,16 @@ import json
 import nltk
 import transformers
 
-nltk.download('punkt')
+try:
+    nltk.data.find('punkt')
+except LookupError:
+    nltk.download('punkt')
+
+TEMPLATES = {
+    'alpaca': 'Below is an instruction that describes a task. Write a response that appropriately completes the request.\r\n\r\n### Instruction: {} {}\r\n\r\n### Response:',
+    'vicuna': 'A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user\'s questions. USER: {} {} ASSISTANT:',
+    'llama': '{} {}'
+}
 
 
 class Processor(object):
@@ -10,52 +19,54 @@ class Processor(object):
         self.model_name = model_name
         self.generation_type = generation_type
         self.instruction = instruction
-        match model_name:
-            case 'alpaca-7b':
-                self.template = "{}\r\n\r\n### {}\r\n\r\n### Response:"
-            case 'vicuna-7b':
-                self.template = ''
-            case _:
-                self.template = ''
+        self.template = TEMPLATES[model_name]
 
-    @staticmethod
-    def process_text(text):
-        return text
-
-    def get_inputs(self, tokenizer, text):
-        input_text = self.template.format(self.instruction, text)
-        return tokenizer(input_text, return_tensors='pt')
+    def get_inputs(self, text):
+        return self.template.format(self.instruction, text)
 
 
 class RocProcessor(Processor):
     def __init__(self, model_name, generation_type):
-        match model_name:
-            case 'alpaca-7b':
-                instruction = ''
-            case 'vicuna-7b':
-                instruction = ''
-            case _:
-                instruction = ''
-
+        instruction = ''
         super(RocProcessor, self).__init__(model_name, generation_type, instruction)
 
-    def process_text(self, text):
+    @staticmethod
+    def get_text(sample):
+        return sample['text']
+
+    @staticmethod
+    def process_text(text):
         return nltk.tokenize.sent_tokenize(text, language='english')[0]
 
 
 class ArxivProcessor(Processor):
     def __init__(self, model_name, generation_type):
-        match model_name:
-            case 'alpaca-7b':
-                instruction = 'Below is an instruction that describes a task. ' \
-                              'Rewrite the following text as an abstract of paper.'
-            case 'vicuna-7b':
-                instruction = ''
-            case _:
-                instruction = ''
+        instruction = 'Rephrase the following text as an abstract of paper:'
+        super(ArxivProcessor, self).__init__(model_name, generation_type, instruction)
 
-        super(ArxivProcessorr, self).__init__(model_name, generation_type, instruction)
+    @staticmethod
+    def get_text(sample):
+        return sample['abstract']
 
-    def process_text(self, text):
+    @staticmethod
+    def process_text(text):
         return text.replace('\n', ' ')
 
+
+class WebtextProcessor(Processor):
+    def __init__(self, model_name, generation_type):
+        if generation_type == 'rewrite':
+            instruction = 'Rephrase the following text:'
+        else:
+            instruction = ''
+        super(WebtextProcessor, self).__init__(model_name, generation_type, instruction)
+
+    @staticmethod
+    def get_text(sample):
+        return sample['text']
+
+    def process_text(self, text):
+        if self.generation_type == 'rewrite':
+            return text
+        else:
+            return text

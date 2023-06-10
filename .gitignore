@@ -13,3 +13,7 @@ weights/llama-7b/*
 weights/llama-13b/*
 weights/vicuna-7b/*
 weights/vicuna-13b/*
+
+# Scripts
+scripts/
+slurm-*
