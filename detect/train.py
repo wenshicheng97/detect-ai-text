@@ -42,11 +42,11 @@ def setup_distributed(port=29500):
     return dist.get_rank(), dist.get_world_size()
 
 
-def load_datasets(real_dir, fake_dir, ratio, tokenizer, batch_size,
+def load_datasets(real_dir, fake_dir, ratio, k, tokenizer, batch_size,
                   max_sequence_length, epoch_size=None, token_dropout=None, seed=None):
 
-    real_corpus = Corpus(ratio, data_dir=real_dir)
-    fake_corpus = Corpus(ratio, data_dir=fake_dir)
+    real_corpus = Corpus(ratio, data_dir=real_dir, k=k)
+    fake_corpus = Corpus(ratio, data_dir=fake_dir, k=k)
 
     real_train, real_valid, real_test = real_corpus.train, real_corpus.valid, real_corpus.test
     fake_train, fake_valid, fake_test = fake_corpus.train, fake_corpus.valid, fake_corpus.test
@@ -58,10 +58,10 @@ def load_datasets(real_dir, fake_dir, ratio, tokenizer, batch_size,
                                    epoch_size, token_dropout, seed)
     train_loader = DataLoader(train_dataset, batch_size, sampler=Sampler(train_dataset), num_workers=0)
 
-    validation_dataset = EncodedDataset(real_valid, fake_valid, tokenizer)
+    validation_dataset = EncodedDataset(real_valid, fake_valid, tokenizer, max_sequence_length=max_sequence_length)
     validation_loader = DataLoader(validation_dataset, batch_size=1, sampler=Sampler(validation_dataset))
 
-    test_dataset = EncodedDataset(real_test, fake_test, tokenizer)
+    test_dataset = EncodedDataset(real_test, fake_test, tokenizer,max_sequence_length=max_sequence_length)
     test_loader = DataLoader(test_dataset, batch_size=1, sampler=Sampler(test_dataset))
 
     return train_loader, validation_loader, test_loader
@@ -182,6 +182,11 @@ def run(**kwargs):
     tokenization_utils.logger.setLevel('ERROR')
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
     model = RobertaForSequenceClassification.from_pretrained(model_name).to(device)
+    pt_model_name = 'best-source-model.pt'
+    if kwargs['model_path'] is not None:
+        print('Loading source model ...')
+        model.load_state_dict(torch.load(kwargs['model_path'])['model_state_dict'])
+        pt_model_name = 'best-target-model.pt'
 
     if rank == 0:
         if distributed():
@@ -193,6 +198,7 @@ def run(**kwargs):
     train_loader, validation_loader, test_loader = load_datasets(kwargs['real_dir'], 
                                                     kwargs['fake_dir'], 
                                                     kwargs['ratio'], 
+                                                    kwargs['k'],
                                                     tokenizer, 
                                                     kwargs['batch_size'],
                                                     kwargs['max_sequence_length'],  
@@ -238,7 +244,7 @@ def run(**kwargs):
                         optimizer_state_dict=optimizer.state_dict(),
                         args=kwargs
                     ),
-                    os.path.join(logdir, "best-model.pt")
+                    os.path.join(logdir, pt_model_name)
                 )
 
         if best_validation_accuracy >= kwargs['early_stop_acc']:
@@ -246,22 +252,24 @@ def run(**kwargs):
             break
 
 
-def construct_args():
+def construct_generation_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--max-epochs', type=int, default=5)
+    parser.add_argument('--max-epochs', type=int, default=10)
     parser.add_argument('--device', type=str, default=None)
-    parser.add_argument('--batch-size', type=int, default=24)
-    parser.add_argument('--max-sequence-length', type=int, default=512)
+    parser.add_argument('--batch-size', type=int, default=16)
+    parser.add_argument('--max-sequence-length', type=int, default=510)
     parser.add_argument('--epoch-size', type=int, default=None)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--real-dir', type=str)
     parser.add_argument('--fake-dir', type=str)
+    parser.add_argument('--model-path', type=str, default=None)
     parser.add_argument('--ratio', type=tuple, default=(0.8, 0.1, 0.1))
+    parser.add_argument('--k', type=int, default=None)
     parser.add_argument('--token-dropout', type=float, default=None)
 
     parser.add_argument('--large', action='store_true', help='use the roberta-large model instead of roberta-base')
-    parser.add_argument('--learning-rate', type=float, default=2e-5)
+    parser.add_argument('--learning-rate', type=float, default=3e-5)
     parser.add_argument('--weight-decay', type=float, default=0)
     parser.add_argument('--early-stop-acc', type=float, default=1.0, help='use to early stop training if '
                                                                           'validation loss exceed the set value')
@@ -273,7 +281,7 @@ def construct_args():
 
 
 def main():
-    args = construct_args()
+    args = construct_generation_args()
     
     nproc = int(subprocess.check_output([sys.executable, '-c', "import torch;"
                                          "print(torch.cuda.device_count() if torch.cuda.is_available() else 1)"]))
