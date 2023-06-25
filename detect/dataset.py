@@ -8,23 +8,26 @@ from tqdm import tqdm
 from transformers import PreTrainedTokenizer
 
 
-def load_texts(data_file, ratio):
+
+def load_texts(data_file, ratio, k):
     texts = []
 
     for line in tqdm(open(data_file), desc=f'Loading {data_file}'):
         texts.append(json.loads(line)['text'])
 
-    train = texts[:int(len(texts) * ratio[0])]
-    valid = texts[int(len(texts) * ratio[0]):int(len(texts) * (ratio[0] + ratio[1]))]
-    test = texts[int(len(texts) * (ratio[0] + ratio[1])):]
+    if k is None:
+        train = texts[:int(len(texts) * ratio[0])]
+        valid = texts[int(len(texts) * ratio[0]):int(len(texts) * (ratio[0] + ratio[1]))]
+        test = texts[int(len(texts) * (ratio[0] + ratio[1])):]
 
-    return train, valid, test
+        return train, valid, test
+    return texts[:k], texts[k:], texts[k:]
 
 
 class Corpus:
-    def __init__(self, ratio, data_dir):
+    def __init__(self, ratio, data_dir, k=None):
         assert type(ratio)==tuple and len(ratio)==3, 'ratio must be a tuple of length 3'
-        self.train, self.valid, self.test = load_texts(data_dir, ratio)
+        self.train, self.valid, self.test = load_texts(data_dir, ratio, k)
 
 
 class EncodedDataset(Dataset):
